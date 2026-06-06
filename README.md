@@ -1,1 +1,1 @@
-# AppPos-Native
+# AppPos-ReactNative-Supabase
