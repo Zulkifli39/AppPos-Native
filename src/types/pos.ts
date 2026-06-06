@@ -11,9 +11,16 @@ export type AppUser = {
   role: Role;
 };
 
+export type Category = {
+  id: number;
+  name: string;
+  description?: string | null;
+};
+
 export type Product = {
   id: number;
   categoryId: number;
+  categoryName?: string | null;
   name: string;
   description?: string | null;
   costPrice: number;

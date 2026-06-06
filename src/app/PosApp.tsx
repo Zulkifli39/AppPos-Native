@@ -1,10 +1,11 @@
 import { StatusBar } from 'expo-status-bar';
 import { useMemo, useState } from 'react';
-import { Pressable, SafeAreaView, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { SafeAreaView, ScrollView, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 
-import { SummaryCard } from '../components/SummaryCard';
+import { AppSidebar, type AppMenuItem } from './AppSidebar';
 import { mockProducts } from '../constants/mockProducts';
 import { LoginScreen } from '../features/auth/LoginScreen';
+import { CategoriesScreen } from '../features/categories/CategoriesScreen';
 import { PosScreen } from '../features/pos/PosScreen';
 import { ProductsScreen } from '../features/products/ProductsScreen';
 import { TransactionsScreen } from '../features/transactions/TransactionsScreen';
@@ -13,23 +14,12 @@ import { colors } from '../theme/colors';
 import type { AppUser } from '../types/pos';
 import { formatCurrency } from '../utils/currency';
 
-const tabs = ['pos', 'products', 'transactions'] as const;
-type Tab = (typeof tabs)[number];
-
-const tabLabel: Record<Tab, string> = {
-  pos: 'POS',
-  products: 'Produk',
-  transactions: 'Transaksi',
-};
-
-const roleLabel: Record<AppUser['role'], string> = {
-  admin: 'Admin',
-  cashier: 'Kasir',
-};
-
 export function PosApp() {
+  const { width } = useWindowDimensions();
+  const isWide = width >= 820;
   const [signedInUser, setSignedInUser] = useState<AppUser | null>(null);
-  const [activeTab, setActiveTab] = useState<Tab>('pos');
+  const [activeMenu, setActiveMenu] = useState<AppMenuItem>('dashboard');
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const { items, addItem, clearCart } = useCartStore();
 
   const cartTotal = useMemo(
@@ -44,50 +34,64 @@ export function PosApp() {
   return (
     <SafeAreaView style={styles.app}>
       <StatusBar style="dark" />
-      <View style={styles.header}>
-        <View>
-          <Text style={styles.eyebrow}>Native POS</Text>
-          <Text style={styles.title}>{signedInUser.fullName}</Text>
-          <Text style={styles.headerMeta}>{roleLabel[signedInUser.role]}</Text>
+      <View style={[styles.shell, !isWide && styles.stackedShell]}>
+        <AppSidebar
+          activeMenu={activeMenu}
+          isCollapsed={isSidebarCollapsed}
+          isWide={isWide}
+          user={signedInUser}
+          onMenuChange={setActiveMenu}
+          onSignOut={() => setSignedInUser(null)}
+          onToggleCollapse={() => setIsSidebarCollapsed((collapsed) => !collapsed)}
+        />
+
+        <View style={styles.main}>
+          <View style={[styles.topBar, !isWide && styles.stackedTopBar]}>
+            <View style={styles.header}>
+              <View style={styles.userBlock}>
+                <Text style={styles.title} numberOfLines={1}>
+                  {`Halo, ${signedInUser.fullName}`}
+                </Text>
+                <Text style={styles.headerMeta}>Kelola operasional toko dari satu tempat.</Text>
+              </View>
+            </View>
+          </View>
+
+          <ScrollView style={styles.scroll} contentContainerStyle={styles.content}>
+            {activeMenu === 'dashboard' && (
+              <PosScreen
+                cartTotal={cartTotal}
+                cartItems={items}
+                onAddProduct={addItem}
+                onCheckout={clearCart}
+                products={mockProducts}
+              />
+            )}
+            {activeMenu === 'categories' && <CategoriesScreen />}
+            {activeMenu === 'products' && <ProductsScreen />}
+            {activeMenu === 'transactions' && <TransactionsScreen />}
+            {activeMenu === 'reports' && (
+              <PlaceholderScreen
+                title="Laporan"
+                copy="Ringkasan penjualan dan performa toko akan ditampilkan di sini."
+              />
+            )}
+          </ScrollView>
         </View>
-        <Pressable style={styles.secondaryButton} onPress={() => setSignedInUser(null)}>
-          <Text style={styles.secondaryButtonText}>Keluar</Text>
-        </Pressable>
       </View>
-
-      <View style={styles.summaryGrid}>
-        <SummaryCard label="Total cart" value={formatCurrency(cartTotal)} />
-        <SummaryCard label="Item" value={`${items.length}`} />
-        <SummaryCard label="Stok rendah" value="3" />
-      </View>
-
-      <View style={styles.tabs}>
-        {tabs.map((tab) => (
-          <Pressable
-            key={tab}
-            style={[styles.tab, activeTab === tab && styles.activeTab]}
-            onPress={() => setActiveTab(tab)}
-          >
-            <Text style={[styles.tabText, activeTab === tab && styles.activeTabText]}>
-              {tabLabel[tab]}
-            </Text>
-          </Pressable>
-        ))}
-      </View>
-
-      <ScrollView contentContainerStyle={styles.content}>
-        {activeTab === 'pos' && (
-          <PosScreen
-            cartTotal={cartTotal}
-            onAddProduct={addItem}
-            onCheckout={clearCart}
-            products={mockProducts}
-          />
-        )}
-        {activeTab === 'products' && <ProductsScreen products={mockProducts} />}
-        {activeTab === 'transactions' && <TransactionsScreen />}
-      </ScrollView>
     </SafeAreaView>
+  );
+}
+
+function PlaceholderScreen({ title, copy }: { title: string; copy: string }) {
+  return (
+    <View style={styles.placeholderSection}>
+      <Text style={styles.sectionTitle}>{title}</Text>
+      <View style={styles.placeholderBox}>
+        <Text style={styles.placeholderTitle}>{title} belum tersedia</Text>
+        <Text style={styles.placeholderCopy}>{copy}</Text>
+      </View>
+    </View>
   );
 }
 
@@ -96,72 +100,85 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: colors.background,
   },
-  header: {
-    padding: 20,
+  shell: {
+    flex: 1,
     flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+  },
+  stackedShell: {
+    flexDirection: 'column',
+  },
+  main: {
+    flex: 1,
+    minWidth: 0,
+  },
+  topBar: {
+    flexDirection: 'row',
+    gap: 12,
+    alignItems: 'stretch',
+    paddingHorizontal: 20,
+    paddingTop: 14,
+    paddingBottom: 10,
     backgroundColor: colors.surface,
     borderBottomWidth: 1,
     borderBottomColor: colors.border,
   },
-  eyebrow: {
-    color: colors.muted,
-    fontSize: 12,
-    fontWeight: '700',
-    textTransform: 'uppercase',
+  stackedTopBar: {
+    flexDirection: 'column',
+    paddingHorizontal: 16,
+  },
+  header: {
+    flex: 1,
+    minHeight: 56,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    gap: 16,
+  },
+  userBlock: {
+    flex: 1,
   },
   title: {
     color: colors.text,
-    fontSize: 24,
+    fontSize: 22,
     fontWeight: '800',
   },
   headerMeta: {
     color: colors.muted,
     marginTop: 2,
   },
-  summaryGrid: {
-    flexDirection: 'row',
-    gap: 10,
-    padding: 16,
-  },
-  tabs: {
-    flexDirection: 'row',
-    gap: 8,
-    paddingHorizontal: 16,
-    paddingBottom: 12,
-  },
-  tab: {
+  scroll: {
     flex: 1,
-    height: 42,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderRadius: 8,
-    backgroundColor: colors.control,
-  },
-  activeTab: {
-    backgroundColor: colors.primary,
-  },
-  tabText: {
-    color: colors.secondaryText,
-    fontWeight: '700',
-  },
-  activeTabText: {
-    color: colors.onPrimary,
   },
   content: {
-    padding: 16,
-    paddingBottom: 32,
+    paddingHorizontal: 20,
+    paddingBottom: 24,
   },
-  secondaryButton: {
-    minHeight: 38,
+  placeholderSection: {
+    gap: 14,
+  },
+  sectionTitle: {
+    color: colors.text,
+    fontSize: 18,
+    fontWeight: '800',
+  },
+  placeholderBox: {
+    minHeight: 180,
     justifyContent: 'center',
-    paddingHorizontal: 14,
+    alignItems: 'center',
+    padding: 18,
     borderRadius: 8,
-    backgroundColor: colors.controlLight,
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.border,
   },
-  secondaryButtonText: {
-    color: colors.strongMuted,
-    fontWeight: '700',
+  placeholderTitle: {
+    color: colors.text,
+    fontSize: 16,
+    fontWeight: '800',
+  },
+  placeholderCopy: {
+    color: colors.muted,
+    textAlign: 'center',
+    marginTop: 6,
   },
 });

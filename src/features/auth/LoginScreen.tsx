@@ -135,6 +135,9 @@ const styles = StyleSheet.create({
   keyboard: {
     flex: 1,
     justifyContent: 'center',
+    alignSelf: 'center',
+    width: '100%',
+    maxWidth: 460,
     gap: 22,
   },
   brand: {
@@ -150,12 +153,15 @@ const styles = StyleSheet.create({
     fontSize: 15,
     lineHeight: 21,
   },
-  panel: {
-    gap: 16,
-    padding: 20,
-    borderRadius: 8,
-    backgroundColor: colors.surface,
-  },
+panel: {
+  width: '100%',
+  maxWidth: 460,
+  alignSelf: 'center',
+  gap: 16,
+  padding: 20,
+  borderRadius: 8,
+  backgroundColor: colors.surface,
+},
   title: {
     fontSize: 28,
     fontWeight: '800',
