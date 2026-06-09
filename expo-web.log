@@ -1,9 +1,0 @@
-
-> native-pos@1.0.0 web
-> expo start --web --port 8081
-
-env: load .env
-env: export DATABASE_URL DIRECT_URL EXPO_PUBLIC_SUPABASE_URL EXPO_PUBLIC_SUPABASE_ANON_KEY
-Starting project at D:\Projects\Native-Pos
-› Port 8081 is being used by another process
-› Skipping dev server
